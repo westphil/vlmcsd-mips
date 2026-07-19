@@ -7,32 +7,29 @@ jobs:
       image: openwrt/sdk:ath79-generic
       options: --user root
     steps:
-      - uses: actions/checkout@v4
-      
       - name: Build
         run: |
-          # 1. Диагностика: покажи, где мы и что вокруг
-          pwd
+          # 1. Сначала удалим всё лишнее, чтобы начать с чистого листа
+          rm -rf *
+          
+          # 2. Клонируем исходники прямо в корень рабочей папки
+          git clone https://github.com/Wind4/vlmcsd.git .
+          
+          # 3. Проверка: видим ли мы Makefile в текущей папке?
+          echo "Содержимое текущей папки:"
           ls -F
           
-          # 2. Ищем файл сборки и выполняем
-          # Пробуем найти GNUmakefile или Makefile в текущей папке или подпапках
-          if [ -f "GNUmakefile" ]; then
-             make clean || true
-             make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static" vlmcsd
-          else
-             echo "GNUmakefile не найден в корне, ищем глубже..."
-             cd $(find . -maxdepth 2 -name "GNUmakefile" -exec dirname {} \;)
-             make clean || true
-             make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static" vlmcsd
-          fi
+          # 4. Собираем
+          # CC автоматически определен в SDK, просто используем make
+          make clean
+          make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static" vlmcsd
           
+          # 5. Проверяем, где лежит файл
+          echo "Файл vlmcsd:"
+          ls -l bin/vlmcsd
+
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: vlmcsd-mips-openwrt
-          # Ищем бинарник, куда бы его ни положил make
-          path: |
-            vlmcsd
-            bin/vlmcsd
-            **/vlmcsd
+          path: bin/vlmcsd
