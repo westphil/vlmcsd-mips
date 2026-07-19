@@ -10,9 +10,11 @@ jobs:
         run: |
           git clone https://github.com/Wind4/vlmcsd.git
           cd vlmcsd
-          # Собираем статический бинарник для MIPS (Big Endian - стандарт для AR9341)
-          make CC=mips-linux-gnu-gcc CFLAGS="-static -Os -D_GNU_SOURCE"
-      - name: Upload Artifact
+          # Добавляем специфичные флаги для mips_24kc (ath79)
+          # -march=mips32r2 -mtune=24kc — это то, что нужно для твоего AR9341
+          # -EB — принудительно Big Endian
+          make CC=mips-linux-gnu-gcc CFLAGS="-static -Os -D_GNU_SOURCE -march=mips32r2 -mtune=24kc -EB" LDFLAGS="-static -EB"
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: vlmcsd-mips-static
