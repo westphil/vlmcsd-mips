@@ -1,29 +1,27 @@
-name: Build vlmcsd MIPS Final
+name: Build vlmcsd for OpenWrt
 on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: dockcross/linux-mips:latest
+      # Официальный SDK для ath79
+      image: openwrt/sdk:ath79-generic
+      # Запускаем от root, чтобы не было проблем с правами при сборке
+      options: --user root
     steps:
-      - name: Checkout and Build
+      # Используем v4, он умеет обходить проблемы с правами
+      - uses: actions/checkout@v4
+      
+      - name: Build
         run: |
-          # Склонировали
-          git clone https://github.com/Wind4/vlmcsd.git vlmcsd
-          cd vlmcsd
-          
-          # Очистка
+          # В SDK все нужные компиляторы уже лежат в PATH
+          # Нам не нужны сторонние gcc-mips, используем родной
           make clean
+          # CFLAGS="-static" гарантирует, что библиотеки будут внутри
+          make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static" vlmcsd
           
-          # СБОРКА: не указываем CC, пусть dockcross сам подставит нужный компилятор
-          # Мы только добавляем нужные нам флаги компиляции
-          make CFLAGS="-static -Os -msoft-float -EB -D_GNU_SOURCE" LDFLAGS="-static -EB" vlmcsd
-          
-          # Проверка
-          ./vlmcsd/vlmcsd -V || true
-
-      - name: Upload Artifact
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: vlmcsd-mips-dockcross
-          path: vlmcsd/bin/vlmcsd
+          name: vlmcsd-mips-openwrt
+          path: bin/vlmcsd
