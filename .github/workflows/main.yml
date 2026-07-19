@@ -1,4 +1,4 @@
-name: Build vlmcsd Final
+name: Build vlmcsd MIPS Final
 on: [push]
 jobs:
   build:
@@ -7,26 +7,29 @@ jobs:
       image: dockcross/linux-mips:latest
       options: --user root
     steps:
-      - name: Git Fix
-        run: git config --global --add safe.directory '*'
-        
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Build
         run: |
-          # Очистка
-          make clean
+          # Находим папку, где лежит GNUmakefile, и переходим туда
+          BUILD_DIR=$(find . -name "GNUmakefile" -exec dirname {} \; | head -n 1)
+          echo "Переходим в папку сборки: $BUILD_DIR"
+          cd "$BUILD_DIR"
           
-          # CC=gcc переопределяет "мудреные" имена компиляторов в Makefile
-          # В dockcross gcc уже настроен под MIPS
+          # СБОРКА: игнорируем clean, просто запускаем билд
+          # CC=gcc в dockcross — это уже настроенный кросс-компилятор
           make CC=gcc CFLAGS="-static -Os -msoft-float -EB -D_GNU_SOURCE" LDFLAGS="-static -EB" vlmcsd
           
-          # Проверяем результат
-          ls -l bin/vlmcsd
+          # Проверяем, что получилось
+          echo "Файлы в папке bin:"
+          ls -R bin/ || echo "Папка bin не найдена, ищем vlmcsd..."
+          find . -name "vlmcsd" -type f
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: vlmcsd-mips-final
-          path: bin/vlmcsd
+          name: vlmcsd-mips-binary
+          # Собираем все найденные vlmcsd, чтобы точно ничего не потерять
+          path: |
+            **/vlmcsd
