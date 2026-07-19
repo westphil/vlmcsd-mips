@@ -1,0 +1,19 @@
+name: Build MIPS vlmcsd
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc-mips-linux-gnu
+      - name: Build
+        run: |
+          git clone https://github.com/Wind4/vlmcsd.git
+          cd vlmcsd
+          # Собираем статический бинарник для MIPS (Big Endian - стандарт для AR9341)
+          make CC=mips-linux-gnu-gcc CFLAGS="-static -Os -D_GNU_SOURCE"
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vlmcsd-mips-static
+          path: vlmcsd/bin/vlmcsd
