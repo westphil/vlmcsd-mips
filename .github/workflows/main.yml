@@ -26,4 +26,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: vlmcsd-mips-dockcross
-          path: vlmcsd/vlmcsd
+          path: vlmcsd/bin/vlmcsd
