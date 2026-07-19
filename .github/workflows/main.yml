@@ -3,19 +3,33 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Используем официальный образ SDK для архитектуры ath79 (это твой AR9341)
-    container: openwrt/sdk:ath79-generic
+    container:
+      image: openwrt/sdk:ath79-generic
+      # Принудительно задаем пользователя root, чтобы не было проблем с правами
+      options: --user root
     steps:
-      - name: Checkout Source
-        uses: actions/checkout@v3
       - name: Build vlmcsd
         run: |
-          # SDK уже настроен, просто собираем
+          # Устанавливаем git, если его нет в образе SDK
+          opkg update && opkg install git
+          
+          # Скачиваем исходники напрямую, обходя actions/checkout
+          git clone https://github.com/Wind4/vlmcsd.git
+          cd vlmcsd
+          
+          # Очистка
           make clean
-          # Используем переменные среды SDK для правильной кросс-компиляции
+          
+          # Сборка
+          # В OpenWrt SDK переменная CC уже настроена под кросс-компилятор
+          # Флаг -static нужен для того, чтобы не зависеть от библиотек системы
           make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" vlmcsd
+          
+          # Проверяем, что получилось
+          ./vlmcsd -V || true
+          
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: vlmcsd-mips-openwrt
-          path: vlmcsd
+          path: vlmcsd/vlmcsd
