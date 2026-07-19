@@ -1,25 +1,21 @@
-name: Build MIPS vlmcsd
+name: Build vlmcsd for OpenWrt
 on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Используем официальный образ SDK для архитектуры ath79 (это твой AR9341)
+    container: openwrt/sdk:ath79-generic
     steps:
-      - name: Install Toolchain
-        run: sudo apt-get update && sudo apt-get install -y gcc-mips-linux-gnu
-      - name: Build
+      - name: Checkout Source
+        uses: actions/checkout@v3
+      - name: Build vlmcsd
         run: |
-          git clone https://github.com/Wind4/vlmcsd.git
-          cd vlmcsd
-          # Очистка перед сборкой
+          # SDK уже настроен, просто собираем
           make clean
-          # Собираем только vlmcsd, игнорируя всё остальное
-          # Флаги передаем в переменных, чтобы Makefile их корректно подхватил
-          make CC=mips-linux-gnu-gcc CFLAGS="-static -Os -msoft-float -EB -D_GNU_SOURCE" LDFLAGS="-static -EB" vlmcsd
-      - name: Verify
-        run: |
-          file vlmcsd/vlmcsd
-      - name: Upload
+          # Используем переменные среды SDK для правильной кросс-компиляции
+          make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" vlmcsd
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vlmcsd-mips-static
-          path: vlmcsd/vlmcsd
+          name: vlmcsd-mips-openwrt
+          path: vlmcsd
