@@ -4,24 +4,35 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      # Официальный SDK для ath79
       image: openwrt/sdk:ath79-generic
-      # Запускаем от root, чтобы не было проблем с правами при сборке
       options: --user root
     steps:
-      # Используем v4, он умеет обходить проблемы с правами
       - uses: actions/checkout@v4
       
       - name: Build
         run: |
-          # В SDK все нужные компиляторы уже лежат в PATH
-          # Нам не нужны сторонние gcc-mips, используем родной
-          make clean
-          # CFLAGS="-static" гарантирует, что библиотеки будут внутри
-          make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static" vlmcsd
+          # 1. Диагностика: покажи, где мы и что вокруг
+          pwd
+          ls -F
+          
+          # 2. Ищем файл сборки и выполняем
+          # Пробуем найти GNUmakefile или Makefile в текущей папке или подпапках
+          if [ -f "GNUmakefile" ]; then
+             make clean || true
+             make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static" vlmcsd
+          else
+             echo "GNUmakefile не найден в корне, ищем глубже..."
+             cd $(find . -maxdepth 2 -name "GNUmakefile" -exec dirname {} \;)
+             make clean || true
+             make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static" vlmcsd
+          fi
           
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: vlmcsd-mips-openwrt
-          path: bin/vlmcsd
+          # Ищем бинарник, куда бы его ни положил make
+          path: |
+            vlmcsd
+            bin/vlmcsd
+            **/vlmcsd
