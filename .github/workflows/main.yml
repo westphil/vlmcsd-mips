@@ -11,13 +11,28 @@ jobs:
       
       - name: Build
         run: |
-          # Никаких cd, никаких find. Просто make.
-          # Если Makefile в корне - он сработает.
-          make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static" vlmcsd
+          # 1. Ищем папку src, где бы она ни была
+          SRC_DIR=$(find . -type d -name "src" | head -n 1)
           
-          # Если не сработал в корне, пробуем в src (на всякий случай)
-          if [ ! -f "bin/vlmcsd" ]; then
-             make -C src CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static" vlmcsd
+          if [ -z "$SRC_DIR" ]; then
+            echo "Ошибка: папка src не найдена. Вот что есть:"
+            ls -R
+            exit 1
+          fi
+          
+          echo "Переходим в: $SRC_DIR"
+          cd "$SRC_DIR"
+          
+          # 2. Собираем именно тут. 
+          # CC, CFLAGS и LDFLAGS пробрасываем напрямую
+          make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static"
+          
+          # 3. Проверка
+          if [ -f "vlmcsd" ]; then
+             echo "УСПЕХ: vlmcsd найден."
+          else
+             echo "Ошибка: бинарник не создан."
+             exit 1
           fi
 
       - name: Upload
