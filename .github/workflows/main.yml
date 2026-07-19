@@ -7,27 +7,21 @@ jobs:
       image: openwrt/sdk:ath79-generic
       options: --user root
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+      
       - name: Build
         run: |
-          # 1. Находим папку, где лежит GNUmakefile, любым способом
-          # Ищем первый попавшийся GNUmakefile или Makefile
-          TARGET_DIR=$(find . -maxdepth 3 -name "GNUmakefile" -o -name "Makefile" | head -n 1 | xargs dirname)
-          
-          echo "Обнаружена папка сборки: $TARGET_DIR"
-          cd "$TARGET_DIR"
-          
-          # 2. Очистка не нужна, просто собираем
-          # Используем переменные, которые уже есть в SDK
+          # Никаких cd, никаких find. Просто make.
+          # Если Makefile в корне - он сработает.
           make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static" vlmcsd
           
-          # 3. На всякий случай скопируем бинарник в корень, чтобы артефакт точно нашел его
-          find . -name "vlmcsd" -type f -exec cp {} ../vlmcsd_binary \;
+          # Если не сработал в корне, пробуем в src (на всякий случай)
+          if [ ! -f "bin/vlmcsd" ]; then
+             make -C src CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static" vlmcsd
+          fi
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: vlmcsd-mips-binary
-          path: vlmcsd_binary
+          name: vlmcsd-mips-final
+          path: "**/vlmcsd"
