@@ -4,31 +4,30 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: openwrt/sdk:ath79-generic
+      image: dockcross/linux-mips:latest
       options: --user root
     steps:
-      - name: Build and everything
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Flatten and Build
         run: |
-          # 1. Сносим всё, что было (если было)
-          rm -rf *
+          # Сваливаем все исходники в одну папку, чтобы не париться с путями
+          find . -name "*.c" -exec cp {} . \;
+          find . -name "*.h" -exec cp {} . \;
+          find . -name "GNUmakefile" -exec cp {} . \;
           
-          # 2. Качаем исходники напрямую через git, минуя любые action-скрипты
-          git clone https://github.com/Wind4/vlmcsd.git .
+          # Собираем тут же
+          make CC=mips-linux-gnu-gcc CFLAGS="-static -Os -msoft-float -EB -D_GNU_SOURCE" LDFLAGS="-static -EB" vlmcsd
           
-          # 3. Дебаг: показываем, что скачали
-          echo "--- Структура после клонирования ---"
-          ls -F
-          
-          # 4. Собираем
-          # Проект vlmcsd требует делать make внутри src/
-          cd src
-          make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static" vlmcsd
-          
-          # 5. Копируем результат в корень, чтобы артефакт его нашел
-          cp vlmcsd ../vlmcsd_binary
-          
+          # Если не получилось, попробуем еще раз через явный вызов src
+          if [ ! -f "vlmcsd" ]; then
+             make -C src CC=mips-linux-gnu-gcc CFLAGS="-static -Os -msoft-float -EB -D_GNU_SOURCE" LDFLAGS="-static -EB" vlmcsd
+             cp src/vlmcsd .
+          fi
+
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: vlmcsd-mips-binary
-          path: vlmcsd_binary
+          name: vlmcsd-mips-final
+          path: vlmcsd
