@@ -10,12 +10,16 @@ jobs:
         run: |
           git clone https://github.com/Wind4/vlmcsd.git
           cd vlmcsd
-          # -msoft-float: Убирает FPU-инструкции
-          # -static: Оставляем статику
-          # -EB: Big Endian
-          make CC=mips-linux-gnu-gcc CFLAGS="-static -Os -msoft-float -EB -D_GNU_SOURCE" LDFLAGS="-static -EB"
+          # Очистка перед сборкой
+          make clean
+          # Собираем только vlmcsd, игнорируя всё остальное
+          # Флаги передаем в переменных, чтобы Makefile их корректно подхватил
+          make CC=mips-linux-gnu-gcc CFLAGS="-static -Os -msoft-float -EB -D_GNU_SOURCE" LDFLAGS="-static -EB" vlmcsd
+      - name: Verify
+        run: |
+          file vlmcsd/vlmcsd
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: vlmcsd-mips-static
-          path: vlmcsd/bin/vlmcsd
+          path: vlmcsd/vlmcsd
