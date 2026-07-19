@@ -8,17 +8,18 @@ jobs:
     steps:
       - name: Checkout and Build
         run: |
-          # 1. Склонировали
+          # Склонировали
           git clone https://github.com/Wind4/vlmcsd.git vlmcsd
-          
-          # 2. Зашли в папку
           cd vlmcsd
           
-          # 3. Теперь делаем clean и билд
+          # Очистка
           make clean
-          make CC=mips-linux-gnu-gcc CFLAGS="-static -Os -msoft-float -EB -D_GNU_SOURCE" LDFLAGS="-static -EB" vlmcsd
           
-          # 4. Проверка (если упадет здесь, увидим в логах)
+          # СБОРКА: не указываем CC, пусть dockcross сам подставит нужный компилятор
+          # Мы только добавляем нужные нам флаги компиляции
+          make CFLAGS="-static -Os -msoft-float -EB -D_GNU_SOURCE" LDFLAGS="-static -EB" vlmcsd
+          
+          # Проверка
           ./vlmcsd/vlmcsd -V || true
 
       - name: Upload Artifact
