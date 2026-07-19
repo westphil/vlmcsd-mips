@@ -4,30 +4,30 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: dockcross/linux-mips:latest
+      image: openwrt/sdk:ath79-generic
       options: --user root
     steps:
-      - name: Git Fix
-        run: git config --global --add safe.directory '*'
-
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Build
         run: |
-          # Переходим в src, так как там лежат исходники и GNUmakefile
-          cd src
+          # 1. Находим папку, где лежит GNUmakefile, любым способом
+          # Ищем первый попавшийся GNUmakefile или Makefile
+          TARGET_DIR=$(find . -maxdepth 3 -name "GNUmakefile" -o -name "Makefile" | head -n 1 | xargs dirname)
           
-          # Убираем все попытки make clean, чтобы не было "No rule"
-          # Используем CROSS_COMPILE, это стандарт для dockcross
-          # CC указываем прямо на компилятор, который есть в PATH
-          make CC=mips-linux-gnu-gcc CROSS_COMPILE=mips-linux-gnu- CFLAGS="-static -Os -msoft-float -EB -D_GNU_SOURCE" LDFLAGS="-static -EB" vlmcsd
+          echo "Обнаружена папка сборки: $TARGET_DIR"
+          cd "$TARGET_DIR"
           
-          # Проверка результата
-          ls -l ../bin/vlmcsd
+          # 2. Очистка не нужна, просто собираем
+          # Используем переменные, которые уже есть в SDK
+          make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static" vlmcsd
+          
+          # 3. На всякий случай скопируем бинарник в корень, чтобы артефакт точно нашел его
+          find . -name "vlmcsd" -type f -exec cp {} ../vlmcsd_binary \;
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: vlmcsd-mips-final
-          path: bin/vlmcsd
+          name: vlmcsd-mips-binary
+          path: vlmcsd_binary
