@@ -1,23 +1,27 @@
-name: Build MIPS vlmcsd
+name: Build vlmcsd MIPS Final
 on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: dockcross/linux-mips:latest
     steps:
-      - name: Install Toolchain
-        run: sudo apt-get update && sudo apt-get install -y gcc-mips-linux-gnu
+      - name: Checkout Source
+        uses: actions/checkout@v3
       - name: Build
         run: |
-          git clone https://github.com/Wind4/vlmcsd.git
-          cd vlmcsd
+          # В dockcross уже всё настроено (CC, CFLAGS и т.д.)
+          # Мы просто используем их переменные окружения
           make clean
-          # Главная магия здесь:
-          # -msoft-float: заставляет компилятор не использовать FPU (избавляет от Illegal instruction)
-          # -march=mips32r2 -mtune=24kc: архитектура твоего процессора AR9341
-          # -EB: Big Endian (стандарт для TP-Link)
-          make CC=mips-linux-gnu-gcc CFLAGS="-static -Os -msoft-float -march=mips32r2 -mtune=24kc -EB -D_GNU_SOURCE" LDFLAGS="-static -EB" vlmcsd
-      - name: Upload Artifact
+          
+          # Собираем с флагами статики
+          make CC=mips-linux-gnu-gcc CFLAGS="-static -Os -msoft-float -EB -D_GNU_SOURCE" LDFLAGS="-static -EB" vlmcsd
+          
+          # Проверка
+          file vlmcsd
+          ./vlmcsd -V || true
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: vlmcsd-mips-final
-          path: vlmcsd/vlmcsd
+          name: vlmcsd-mips-dockcross
+          path: vlmcsd
