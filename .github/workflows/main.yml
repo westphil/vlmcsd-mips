@@ -6,22 +6,23 @@ jobs:
     container:
       image: dockcross/linux-mips:latest
     steps:
-      - name: Checkout Source
-        uses: actions/checkout@v3
-      - name: Build
+      - name: Checkout and Build
         run: |
-          # В dockcross уже всё настроено (CC, CFLAGS и т.д.)
-          # Мы просто используем их переменные окружения
-          make clean
+          # 1. Склонировали
+          git clone https://github.com/Wind4/vlmcsd.git vlmcsd
           
-          # Собираем с флагами статики
+          # 2. Зашли в папку
+          cd vlmcsd
+          
+          # 3. Теперь делаем clean и билд
+          make clean
           make CC=mips-linux-gnu-gcc CFLAGS="-static -Os -msoft-float -EB -D_GNU_SOURCE" LDFLAGS="-static -EB" vlmcsd
           
-          # Проверка
-          file vlmcsd
-          ./vlmcsd -V || true
-      - name: Upload
+          # 4. Проверка (если упадет здесь, увидим в логах)
+          ./vlmcsd/vlmcsd -V || true
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: vlmcsd-mips-dockcross
-          path: vlmcsd
+          path: vlmcsd/vlmcsd
