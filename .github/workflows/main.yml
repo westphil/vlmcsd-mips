@@ -7,36 +7,28 @@ jobs:
       image: openwrt/sdk:ath79-generic
       options: --user root
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Build
+      - name: Build and everything
         run: |
-          # 1. Ищем папку src, где бы она ни была
-          SRC_DIR=$(find . -type d -name "src" | head -n 1)
+          # 1. Сносим всё, что было (если было)
+          rm -rf *
           
-          if [ -z "$SRC_DIR" ]; then
-            echo "Ошибка: папка src не найдена. Вот что есть:"
-            ls -R
-            exit 1
-          fi
+          # 2. Качаем исходники напрямую через git, минуя любые action-скрипты
+          git clone https://github.com/Wind4/vlmcsd.git .
           
-          echo "Переходим в: $SRC_DIR"
-          cd "$SRC_DIR"
+          # 3. Дебаг: показываем, что скачали
+          echo "--- Структура после клонирования ---"
+          ls -F
           
-          # 2. Собираем именно тут. 
-          # CC, CFLAGS и LDFLAGS пробрасываем напрямую
-          make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static"
+          # 4. Собираем
+          # Проект vlmcsd требует делать make внутри src/
+          cd src
+          make CC=mips-openwrt-linux-musl-gcc CFLAGS="-static -Os -D_GNU_SOURCE" LDFLAGS="-static" vlmcsd
           
-          # 3. Проверка
-          if [ -f "vlmcsd" ]; then
-             echo "УСПЕХ: vlmcsd найден."
-          else
-             echo "Ошибка: бинарник не создан."
-             exit 1
-          fi
-
+          # 5. Копируем результат в корень, чтобы артефакт его нашел
+          cp vlmcsd ../vlmcsd_binary
+          
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: vlmcsd-mips-final
-          path: "**/vlmcsd"
+          name: vlmcsd-mips-binary
+          path: vlmcsd_binary
